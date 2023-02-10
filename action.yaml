@@ -60,4 +60,5 @@ runs:
           exit 1;
         fi
 
+        echo "::notice::Production URL is ${prodURL}"
         echo "production_url=${prodURL}" >> $GITHUB_OUTPUT
