@@ -1,0 +1,63 @@
+name: 'Retrieve the Production for a Platform.sh project that has a GitHub Integration'
+description: 'Retrieves the production URL of the integrated Platform.sh project that is connected to a repository'
+inputs:
+  platformsh_token:
+    description: 'Platform.sh API Token. Needed to trigger the source operation.'
+    required: true
+  project_id:  # owner of the repo
+    description: 'Owner/namespace of the target repository. Default of {github.repository}'
+    required: true
+outputs:
+  production_url:
+    description: "URL associated with the production environment on Plaform.sh"
+    value: ${{ steps.get-production-url.outputs.production_url }}
+
+# Things we need to do
+# Set up our environmental variables so we can use the github cli tool
+# See if the platform.sh cli tool is installed
+# if not, install the cli
+# Get the envirnoment name for the production environment
+# Get the primary URL for the production environment
+runs:
+  using: "composite"
+  steps:
+    # Set up our environmental variables
+    - name: 'Setup Environmental Variables'
+      shell: bash
+      run: |
+        echo "PLATFORMSH_CLI_TOKEN=${{inputs.platformsh_token}}" >> $GITHUB_ENV
+
+    - name: 'Is Platform CLI Installed?'
+      id: 'is-psh-cli-installed'
+      shell: bash
+      run: |
+        if ! command -v platform >/dev/null; then
+          curl -fsS https://platform.sh/cli/installer | php
+          echo "PATH=${HOME}/.platformsh/bin:${PATH}" >> $GITHUB_ENV
+        fi
+
+    - name: 'Get Production Environment Name'
+      id: 'get-prod-env-name'
+      shell: bash
+      run: |
+        prodEnv=$(platform environment:list -p ${{ inputs.project_id }} --type production --columns ID --no-header --format plain --pipe)
+
+        if [[ -z "${prodEnv}" ]]; then
+          echo "::error::Was unable to determine the production environment for project id ${{ inputs.project_id }}"
+          exit 1;
+        fi
+
+        echo "prod_env_name=${prodEnv}" >> $GITHUB_OUTPUT
+
+    - name: 'Get Production URL'
+      id: get-production-url
+      shell: bash
+      run: |
+        prodURL=$(platform url -e ${{ steps.get-prod-env-name.outputs.prod_env_name }} -p ${{ inputs.project_id }} --primary --pipe )
+
+        if [[ -z "${prodURL}" ]]; then
+          echo "::error::Was unable to determine the production URL for project id ${{ inputs.project_id }}"
+          exit 1;
+        fi
+
+        echo "production_url=${prodURL}" >> $GITHUB_OUTPUT
