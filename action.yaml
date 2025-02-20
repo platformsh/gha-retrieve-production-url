@@ -7,9 +7,12 @@ inputs:
   project_id:  # owner of the repo
     description: 'Owner/namespace of the target repository. Default of {github.repository}'
     required: true
+  provider:
+    description: 'PaaS provider. [platform|upsun]. Default of platform'
+    default: platform
 outputs:
   production_url:
-    description: "URL associated with the production environment on Plaform.sh"
+    description: "URL associated with the production environment on Paas provider"
     value: ${{ steps.get-production-url.outputs.production_url }}
 
 # Things we need to do
@@ -21,6 +24,28 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: verify and set provider
+      shell: bash
+      run: |
+        provider="${{ inputs.provider }}"
+        if [ "platform" != "${{ inputs.provider }}" ] && [ "upsun" != "${{ inputs.provider }}" ]; then
+          echo "::warning::The value you provided for Provider is not valid. Setting to default of platform"
+          provider="platform"
+        fi
+        echo "::debug::Setting PaaS provider to ${provider}."
+        echo "PROVIDER=${provider}" >> $GITHUB_ENV
+
+    - name: set provider bin path
+      shell: bash
+      run: | 
+        # sigh. if the provider is platform, the bin path is .platformsh. otherwise, it's just upsun
+        binPath=".${PROVIDER}"
+        if [ "platform" = "${PROVIDER} ]; then
+          binPath="${binPath}sh"
+        fi
+        echo "::debug::Setting provider bin path to ${binPath}."       
+        echo "PROVIDER_BIN_PATH=${binPath}" >> $GITHUB_ENV
+
     # Set up our environmental variables
     - name: 'Setup Environmental Variables'
       shell: bash
@@ -31,16 +56,17 @@ runs:
       id: 'is-psh-cli-installed'
       shell: bash
       run: |
-        if ! command -v platform >/dev/null; then
-          curl -fsS https://platform.sh/cli/installer | php
-          echo "PATH=${HOME}/.platformsh/bin:${PATH}" >> $GITHUB_ENV
+        if ! command -v "${PROVIDER}" >/dev/null; then
+          echo "::debug::${PROVIDER} cli not installed. Installing..."
+          curl -fsSL https://raw.githubusercontent.com/platformsh/cli/main/installer.sh | VENDOR="${PROVIDER}" bash
+          echo "PATH=${HOME}/${PROVIDER_BIN_PATH}/bin:${PATH}" >> $GITHUB_ENV
         fi
 
     - name: 'Get Production Environment Name'
       id: 'get-prod-env-name'
       shell: bash
       run: |
-        prodEnv=$(platform environment:list -p ${{ inputs.project_id }} --type production --columns ID --no-header --format plain --pipe)
+        prodEnv=$(${PROVIDER} environment:list -p ${{ inputs.project_id }} --type production --columns ID --no-header --format plain --pipe)
 
         if [[ -z "${prodEnv}" ]]; then
           echo "::error::Was unable to determine the production environment for project id ${{ inputs.project_id }}"
@@ -53,7 +79,7 @@ runs:
       id: get-production-url
       shell: bash
       run: |
-        prodURL=$(platform url -e ${{ steps.get-prod-env-name.outputs.prod_env_name }} -p ${{ inputs.project_id }} --primary --pipe )
+        prodURL=$(${PROVIDER} url -e ${{ steps.get-prod-env-name.outputs.prod_env_name }} -p ${{ inputs.project_id }} --primary --pipe )
 
         if [[ -z "${prodURL}" ]]; then
           echo "::error::Was unable to determine the production URL for project id ${{ inputs.project_id }}"
