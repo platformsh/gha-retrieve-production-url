@@ -35,22 +35,28 @@ runs:
         echo "::debug::Setting PaaS provider to ${provider}."
         echo "PROVIDER=${provider}" >> $GITHUB_ENV
 
-    - name: set provider bin path
+    - name: set provider bin path and environment variable
       shell: bash
       run: | 
         # sigh. if the provider is platform, the bin path is .platformsh. otherwise, it's just upsun
-        binPath=".${PROVIDER}"
+        binPath="${PROVIDER}"
+        envVarPrefix="${PROVIDER}"
         if [ "platform" = "${PROVIDER}" ]; then
           binPath="${binPath}sh"
         fi
+        # use binPath to generate the environment variable prefix, but we need it in all caps
+        envVarPrefix=$(tr '[:lower:]' '[:upper:]' <<< "${binPath}")
+        binPath=".{binPath}"
+        
         echo "::debug::Setting provider bin path to ${binPath}."       
         echo "PROVIDER_BIN_PATH=${binPath}" >> $GITHUB_ENV
+        echo "PROVIDER_ENV_PREFIX=${envVarPrefix}" >> $GITHUB_ENV
 
     # Set up our environmental variables
     - name: 'Setup Environmental Variables'
       shell: bash
       run: |
-        echo "PLATFORMSH_CLI_TOKEN=${{inputs.platformsh_token}}" >> $GITHUB_ENV
+        echo "${PROVIDER_ENV_PREFIX}_CLI_TOKEN=${{inputs.platformsh_token}}" >> $GITHUB_ENV
 
     - name: 'Is Platform CLI Installed?'
       id: 'is-psh-cli-installed'
