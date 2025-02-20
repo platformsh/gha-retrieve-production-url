@@ -40,7 +40,7 @@ runs:
       run: | 
         # sigh. if the provider is platform, the bin path is .platformsh. otherwise, it's just upsun
         binPath=".${PROVIDER}"
-        if [ "platform" = "${PROVIDER} ]; then
+        if [ "platform" = "${PROVIDER}" ]; then
           binPath="${binPath}sh"
         fi
         echo "::debug::Setting provider bin path to ${binPath}."       
