@@ -5,6 +5,7 @@ Retrieves the production URL of the integrated Platform.sh project that is conne
 ## Inputs
 * `platformsh_token` **REQUIRED** - A Platform.sh API Token.
 * `project_id` - **REQUIRED** The Platform.sh Project ID of the associated project.
+* `provider` - The CLI tool to use. Valid options: `upsun` and `platform` (Upsun Fixed). Defaults to `platform`
 
 ## Outputs
 * `production_url` - production URL of the integrated Platform.sh project. 
