@@ -12,7 +12,7 @@ inputs:
     default: platform
 outputs:
   production_url:
-    description: "URL associated with the production environment on Paas provider"
+    description: "URL associated with the production environment on PaaS provider"
     value: ${{ steps.get-production-url.outputs.production_url }}
 
 # Things we need to do
