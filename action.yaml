@@ -46,7 +46,7 @@ runs:
         fi
         # use binPath to generate the environment variable prefix, but we need it in all caps
         envVarPrefix=$(tr '[:lower:]' '[:upper:]' <<< "${binPath}")
-        binPath=".{binPath}"
+        binPath=".${binPath}"
         
         echo "::debug::Setting provider bin path to ${binPath}."       
         echo "PROVIDER_BIN_PATH=${binPath}" >> $GITHUB_ENV
